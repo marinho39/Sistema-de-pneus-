@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão de Pneus</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+        }
+
+        body {
+            background-color: #f5f6fa;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        button {
+            background: var(--secondary);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: var(--primary);
+            color: white;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .status-good {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .status-warning {
+            color: #f39c12;
+            font-weight: bold;
+        }
+
+        .status-critical {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Sistema de Gestão de Pneus</h1>
+    </header>
+
+    <div class="container">
+        <div class="dashboard">
+            <div class="card">
+                <h2>Cadastro de Pneu</h2>
+                <form id="tireForm">
+                    <div class="form-group">
+                        <label>Código do Pneu</label>
+                        <input type="text" id="tireCode" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Marca</label>
+                        <input type="text" id="brand" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Modelo</label>
+                        <input type="text" id="model" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select id="condition" required>
+                            <option value="novo">Novo</option>
+                            <option value="usado">Usado</option>
+                            <option value="recapado">Recapado</option>
+                        </select>
+                    </div>
+                    <button type="submit">Cadastrar</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Estatísticas</h2>
+                <div id="stats">
+                    <p>Total de Pneus: <span id="totalTires">0</span></p>
+                    <p>Pneus Novos: <span id="newTires">0</span></p>
+                    <p>Pneus Usados: <span id="usedTires">0</span></p>
+                    <p>Pneus Recapados: <span id="recappedTires">0</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Inventário de Pneus</h2>
+            <table id="tiresTable">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>Estado</th>
+                        <th>Data de Cadastro</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tiresTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let tires = JSON.parse(localStorage.getItem('tires')) || [];
+
+        function updateStats() {
+            document.getElementById('totalTires').textContent = tires.length;
+            document.getElementById('newTires').textContent = tires.filter(t => t.condition === 'novo').length;
+            document.getElementById('usedTires').textContent = tires.filter(t => t.condition === 'usado').length;
+            document.getElementById('recappedTires').textContent = tires.filter(t => t.condition === 'recapado').length;
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tiresTableBody');
+            tbody.innerHTML = '';
+            
+            tires.forEach((tire, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${tire.code}</td>
+                    <td>${tire.brand}</td>
+                    <td>${tire.model}</td>
+                    <td class="status-${tire.condition === 'novo' ? 'good' : tire.condition === 'usado' ? 'warning' : 'critical'}">
+                        ${tire.condition.charAt(0).toUpperCase() + tire.condition.slice(1)}
+                    </td>
+                    <td>${tire.date}</td>
+                    <td>
+                        <button onclick="deleteTire(${index})" style="background: var(--accent)">Excluir</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteTire(index) {
+            if (confirm('Tem certeza que deseja excluir este pneu?')) {
+                tires.splice(index, 1);
+                localStorage.setItem('tires', JSON.stringify(tires));
+                updateTable();
+                updateStats();
+            }
+        }
+
+        document.getElementById('tireForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const tire = {
+                code: document.getElementById('tireCode').value,
+                brand: document.getElementById('brand').value,
+                model: document.getElementById('model').value,
+                condition: document.getElementById('condition').value,
+                date: new Date().toLocaleDateString()
+            };
+
+            tires.push(tire);
+            localStorage.setItem('tires', JSON.stringify(tires));
+            
+            this.reset();
+            updateTable();
+            updateStats();
+
+            alert('Pneu cadastrado com sucesso!');
+        });
+
+        // Inicialização
+        updateTable();
+        updateStats();
+    </script>
+</body>
+</html>
